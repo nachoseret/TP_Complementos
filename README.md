@@ -1,5 +1,5 @@
-##Algoritmo de Fruchterman Reingold por Ignacio Seret
-
+#Algoritmo de Fruchterman Reingold por Ignacio Seret
+----
 Para ejecutar, usar Python 2.x y seguir estos pasos:
 
 ```console
