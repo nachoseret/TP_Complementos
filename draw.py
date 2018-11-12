@@ -2,6 +2,13 @@ import pygame
 import math
 import random 
 
+class vData:
+    def __init__(self, x, y):
+        self.pos = (x,y)
+        self.force = (0,0)
+        self.over = False
+        self.grab = False
+
 def gManta(n):
     V = [i for i in range(1,n*n + 1)]
     E = []
@@ -22,26 +29,31 @@ def graphK(n):
 
 def randomPos(G):
     V,E = G
-    pos = {}
-    force = {}
+    data = {}
 
     for v in V:
-        pos[v] = (random.randrange(400,600),random.randrange(300,500))
-        force[v] = (0,0)
-    return (V,E,pos,force)
+        data[v] = vData(random.randrange(400,600),random.randrange(300,500))
+    return (V,E,data)
 
 def plotGraph(G, show_more):
-    V,E,pos,force = G
+    V,E,data = G
     for e in E:
         v0,v1 = e
-        x0,y0 = pos[v0]
-        x1,y1 = pos[v1]
+        x0,y0 = data[v0].pos
+        x1,y1 = data[v1].pos
         pygame.draw.line(screen, BLACK, [int(round(x0)), int(round(y0))], [int(round(x1)), int(round(y1))], 2)
     for v in V:
-        x,y = pos[v]
-        pygame.draw.circle(screen, RED, [int(round(x)), int(round(y))], 5)
+        x,y = data[v].pos
+        if data[v].over:
+            pygame.draw.circle(screen, GREEN, [int(round(x)), int(round(y))], 15, 2)
+            pygame.draw.circle(screen, RED, [int(round(x)), int(round(y))], 5)
+        if data[v].grab:
+            pygame.draw.circle(screen, YELLOW, [int(round(x)), int(round(y))], 15, 2)
+            pygame.draw.circle(screen, RED, [int(round(x)), int(round(y))], 5)
+        else:
+            pygame.draw.circle(screen, RED, [int(round(x)), int(round(y))], 5)
         if show_more:
-            fx,fy = force[v]
+            fx,fy = data[v].force
             pygame.draw.line(screen, GREEN, [int(round(x)), int(round(y))], [int(round(x+(fx*20))), int(round(y+(fy*20)))], 2)
             text = myfont2.render(str(math.sqrt(fx**2 + fy**2)), False, GREEN)
             screen.blit(text,[int(round(x+(fx*20)))+5, int(round(y+(fy*20)))-5])
@@ -60,45 +72,108 @@ def sub(u,v):
     return (x0-x1,y0-y1)
 
 def updatePos(G,k):
-    V,E,pos,force = G
+    V,E,data = G
+    dist = {}
 
     for v in V:
-        force[v] = (0,0)
+        data[v].force = (0,0)
 
     for i,v0 in enumerate(V):
-        x0,y0 = pos[v0]
+        x0,y0 = data[v0].pos
         for v1 in V[0:i]+V[i+1:]:
-            x1,y1 = pos[v1]
-            dist = math.sqrt((x1-x0)**2 + (y1-y0)**2)
-            f = k/dist
-            s = (y1-y0)/dist
-            c = (x1-x0)/dist
-            force[v0] = sub(force[v0],(c*f,s*f))
-            force[v1] = sum(force[v1],(c*f,s*f))
+            x1,y1 = data[v1].pos
+            dist[v0,v1] = math.sqrt((x1-x0)**2 + (y1-y0)**2)
+            if dist[v0,v1] < 2E-23:
+                dist[v0,v1] = 2E-23 # Epsilon de la maquina
+            dist[v1,v0] = dist[v0,v1]
+            f = k/dist[v0,v1]
+            s = (y1-y0)/dist[v0,v1]
+            c = (x1-x0)/dist[v0,v1]
+            data[v0].force = sub(data[v0].force,(c*f,s*f))
+            data[v1].force = sum(data[v1].force,(c*f,s*f))
 
     for v0,v1 in E:
-        x0,y0 = pos[v0]
-        x1,y1 = pos[v1]
-        dist = math.sqrt((x1-x0)**2 + (y1-y0)**2)
-        f = dist/k
-        s = (y1-y0)/dist
-        c = (x1-x0)/dist
-        force[v0] = sum(force[v0],(c*f,s*f))
-        force[v1] = sub(force[v1],(c*f,s*f))
+        x0,y0 = data[v0].pos
+        x1,y1 = data[v1].pos
+        f = dist[v0,v1]/k
+        s = (y1-y0)/dist[v0,v1]
+        c = (x1-x0)/dist[v0,v1]
+        data[v0].force = sum(data[v0].force,(c*f,s*f))
+        data[v1].force = sub(data[v1].force,(c*f,s*f))
 
     for v in V:
-        pos[v] = sum(pos[v],force[v])
+        data[v].pos = sum(data[v].pos,data[v].force)
 
-    return (V,E,pos,force)
+    return (V,E,data)
 
 def updateK(G,k,width,height):
-    V,E,pos,force = G
+    V,E,data = G
 
     for v in V:
-        x,y = pos[v]
+        x,y = data[v].pos
         if x>=width-5 or y>=height-5 or x<=5 or y<=5:
             return k*0.99
     return k
+
+def mouseHandler(G):
+    V,E,data = G
+    x0,y0 = pygame.mouse.get_pos()
+    click,_,_ = pygame.mouse.get_pressed()
+    inUse = False
+    for v in V:
+        data[v].over = False
+        x1,y1 = data[v].pos
+        dist = (x1-x0)**2 + (y1-y0)**2
+        if dist < 225 or data[v].grab:
+            data[v].over = True
+        if data[v].over and not data[v].grab and click:
+            pygame.mouse.set_pos((x1,y1))
+            pygame.mouse.set_visible(False)
+            x0,y0 = (x1,y1)
+            data[v].grab = True
+        if not click:
+            data[v].grab = False
+            pygame.mouse.set_visible(True)
+        if data[v].grab:
+            data[v].pos = (x0,y0)
+            inUse = True
+
+    return (V,E,data), inUse
+
+def plotMenu(inUse, auto, k, width, height):
+    pygame.draw.rect(screen, WHITE, [0, 0, 255, 30])
+    if auto:
+        pygame.draw.rect(screen, RED, [0, 0, 80, 30],2)
+        text = myfont.render("AUTO", False, RED)
+    else:
+        pygame.draw.rect(screen, BLACK, [0, 0, 80, 30],2)
+        text = myfont.render("AUTO", False, BLACK)
+    screen.blit(text,text.get_rect(center = [40,15]))
+    pygame.draw.rect(screen, (k*2, 225-(k*2), 0), [120, 0, k, 30])
+    pygame.draw.rect(screen, BLACK, [120, 0, 100, 30],2)
+    pygame.draw.rect(screen, BLACK, [85, 0, 30, 30],2) # -
+    text = myfont.render("-", False, BLACK)
+    screen.blit(text,text.get_rect(center = [100,15]))
+    pygame.draw.rect(screen, BLACK, [225, 0, 30, 30],2) # +
+    text = myfont.render("+", False, BLACK)
+    screen.blit(text,text.get_rect(center = [240,15]))
+
+    if not inUse:
+        click,_,_ = pygame.mouse.get_pressed()
+        x0,y0 = pygame.mouse.get_pos()
+        if click and x0>=85 and x0<=115 and y0<=30:
+            auto = False
+            k = k-1
+            if k <= 10:
+                k = 10
+        if click and x0>=225 and x0<=255 and y0<=30:
+            auto = False
+            k = k+1
+            if k >= 100:
+                k = 100
+        if click and x0<=80 and y0<=30:
+            auto = True
+    return (auto,k)
 
 pygame.init()
 pygame.font.init()
@@ -110,6 +185,7 @@ WHITE = (255, 255, 255)
 BLUE =  (  0,   0, 255)
 GREEN = (  0, 255,   0)
 RED =   (255,   0,   0)
+YELLOW = (255, 225, 0)
 
 width = 1000
 height = 800
@@ -123,11 +199,13 @@ clock = pygame.time.Clock()
 Petersen = randomPos(([1,2,3,4,5,6,7,8,9,10],
     [(1,2),(2,3),(3,4),(4,5),(5,1),(1,7),(2,8),(3,9),(4,10),(5,6),(7,10),(10,8),(8,6),(6,9),(9,7)]))
 
-BTree = ([1,2,3,4,5,6,7],
-    [(4,2),(4,6),(2,1),(2,3),(6,5),(6,7)])
+BTree = randomPos(([1,2,3,4,5,6,7],
+    [(4,2),(4,6),(2,1),(2,3),(6,5),(6,7)]))
 
-G = randomPos(gManta(4))
+#G = randomPos(gManta(4))
+G = BTree
 k = 100
+auto = True
 
 while not done:
     clock.tick(60)
@@ -138,8 +216,11 @@ while not done:
 
     screen.fill(WHITE)
     plotGraph(G, False)
+    G,inUse = mouseHandler(G)
     G = updatePos(G,k)
-    k = updateK(G,k,width,height)
+    auto, k = plotMenu(inUse,auto,k,width,height)
+    if auto:
+        k = updateK(G,k,width,height)
     pygame.display.flip()
 
 pygame.quit()
