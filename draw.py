@@ -12,10 +12,6 @@ GREEN = (  0, 255,   0)
 RED =   (255,   0,   0)
 YELLOW = (255, 225, 0)
 
-width = 1000
-height = 800
-screen = pygame.display.set_mode([width,height])
-
 # Esta clase almacena los datos extra que necesitamos de un vertice. Estos datos son
 # - posicion: una tupla "pos" de flotantes x,y
 # - fuerza: una tupla "force" de flotantes x,y
@@ -317,6 +313,10 @@ ap.add_argument( '-v', '-verbose', action='store_true', help='Modo verbose')
 ap.add_argument('file', type=argparse.FileType('r'), help='Especificar archivo de donde leer el grafo', default=None)
 ap.add_argument('-K', nargs='?', type=int, default=100, help='Especificar coeficiente de fuerza inicial')
 args = vars(ap.parse_args())
+
+width = 1000 # Ancho de la ventana
+height = 800 # Alto de la ventana
+screen = pygame.display.set_mode([width,height]) # Creamos la pantalla
 
 # Inicializamos pygame
 pygame.init()
