@@ -346,7 +346,7 @@ while not done: # Mientras que la ventana este abierta
             done=True
 
     screen.fill(WHITE) # Fondo blanco
-    plotGraph(G, args["v"]) # Imprimimos el grafo, en modo verbose imprimimos los vercores fuerza
+    plotGraph(G, args["v"]) # Imprimimos el grafo. En modo verbose tambien imprimimos los vectores fuerza
     G,inUse = mouseHandler(G) # Reaccionamos a los eventos del mouse
     if args["v"]: # En modo verbose calculamos el tiempo en CPU que lleva realizar una iteracion
         t0 = time.clock()
@@ -360,7 +360,7 @@ while not done: # Mientras que la ventana este abierta
             avg = dT/it
         text = myfont.render("Tiempo de CPU promedio por iteracion = " + str(avg), False, BLACK)
         screen.blit(text,[5,780])
-        verbose(G,k,t1-t0,it) # En modo verbose, imprimimos una tabla de datos en cada iteracion
+        verbose(G,k,t1-t0,it) # En modo verbose, imprimimos una tabla de datos en la terminal por cada iteracion
     auto, k = plotMenu(inUse,auto,k) # Imprimimos el menu
     if auto and k > 30: # Si el ajuste automatico esta encendido, llamamos a updateK
         k = updateK(G,k,width,height)
